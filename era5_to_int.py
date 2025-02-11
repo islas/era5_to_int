@@ -165,17 +165,15 @@ def find_time_index(ncfilename, validtime):
             return idx[0][0]
 
 
-def write_slab(slab, xlvl, proj, WPSname, hdate, units, map_source, desc):
+def write_slab( intfile, slab, xlvl, proj, WPSname, hdate, units, map_source, desc):
     """ Writes a 2-d array (a 'slab' of data) to an opened intermediate file
     using the provided level, projection, and other metadata.
     This routine assumes that the intermediate file has already been created
     through a previous call to the WPSUtils.intermediate.write_met_init
     routine.
     """
-    import WPSUtils
-
-    stat = WPSUtils.intermediate.write_next_met_field(
-        5, slab.shape[0], slab.shape[1], proj.projType, 0.0, xlvl,
+    stat = intfile.write_next_met_field(
+        5, slab.shape[1], slab.shape[0], proj.projType, 0.0, xlvl,
         proj.startLat, proj.startLon, proj.startI, proj.startJ,
         proj.deltaLat, proj.deltaLon, proj.dx, proj.dy, proj.xlonc,
         proj.truelat1, proj.truelat2, 6371229.0, 0, v.WPSname,
@@ -199,9 +197,9 @@ if __name__ == '__main__':
     initdate = sys.argv[1]
 
     # Set up the two map projections used in the ERA5 fields to be converted
-    Gaussian = MapProjection(WPSUtils.intermediate.proj_gauss,
+    Gaussian = MapProjection(WPSUtils.Projections.GAUSS,
          89.7848769072, 0.0, 1.0, 1.0, 640.0 / 2.0, 360.0 / 1280.0)
-    LatLon = MapProjection(WPSUtils.intermediate.proj_latlon,
+    LatLon = MapProjection(WPSUtils.Projections.LATLON,
          90.0, 0.0, 1.0, 1.0, -0.25, 0.25)
 
     int_vars = []
@@ -226,7 +224,7 @@ if __name__ == '__main__':
 
     find_file = find_glade_file
 
-    stat = WPSUtils.intermediate.write_met_init('ERA5', initdate)
+    intfile = WPSUtils.IntermediateFile('ERA5', initdate)
 
     for v in int_vars:
         e5filename = find_file(v, initdate)
@@ -245,16 +243,16 @@ if __name__ == '__main__':
             field_arr = f.variables[v.ERA5name][idx,:]
 
             if field_arr.ndim == 2:
-                slab = np.transpose(field_arr)
+                slab = field_arr
                 xlvl = 200100.0
                 if v.WPSname == 'SOILGEO':
                     xlvl = 1.0
-                write_slab(slab, xlvl, proj, v.WPSname, hdate, units,
+                write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
                     map_source, desc)
             else:
                 for k in range(f.dimensions['level'].size):
-                    slab = np.transpose(field_arr[k,:,:])
-                    write_slab(slab, float(f.variables['level'][k]), proj,
+                    slab = field_arr[k,:,:]
+                    write_slab(intfile, slab, float(f.variables['level'][k]), proj,
                         v.WPSname, hdate, units, map_source, desc)
 
-    stat = WPSUtils.intermediate.write_met_close()
+    intfile.close()

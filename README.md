@@ -46,14 +46,6 @@ The `era5_to_int.py` script requires:
 - netCDF4
 - NumPy
 
-Before running the script, it is currently necessary to compile the
-`intermediate.F90` file into a Python module using `f2py`. This is accomplished
-with the following command:
-
-```
-f2py -c -m WPSUtils intermediate.F90
-```
-
 ## Usage
 
 The `era5_to_int.py` script takes a single command-line argument, which is the
