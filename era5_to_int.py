@@ -97,11 +97,14 @@ class MetVar:
         self.isInvariant = isInvariant
 
 
-def find_glade_file(var, validtime):
+def find_era5_file(var, validtime, localpaths=None):
     """ Returns a filename with path information of an ERA5 netCDF file given
     the ERA5 netCDF variable name and the valid time of the variable.
+    The localpaths argument may be used to specify an array of local
+    directories to search for ERA5 netCDF files. If localpaths is not provided
+    or is None, known paths on the NWSC Glade filesystem are searched.
     If no file can be found containing the specified variable at the specified
-    time, and empty string is returned.
+    time an empty string is returned.
     """
     import os.path
 
@@ -111,6 +114,11 @@ def find_glade_file(var, validtime):
         '/glade/campaign/collections/rda/data/ds633.0/e5.oper.invariant/197901/',
         '/gpfs/csfs1/collections/rda/decsdata/ds630.0/P/e5.oper.invariant/201601/'
         ]
+
+    if localpaths != None:
+        file_paths = localpaths
+    else:
+        file_paths = glade_paths
 
     tmp = validtime.split('-')
     yyyy = int(tmp[0])
@@ -122,13 +130,16 @@ def find_glade_file(var, validtime):
     begin_date = var.beginDateFn(yyyy, mm, dd, hh)
     end_date = var.endDateFn(yyyy, mm, dd, hh)
 
-    for p in glade_paths:
-        if not var.isInvariant:
-            glade_base_path = p + f'{yyyy:04d}{mm:02d}/'
+    for p in file_paths:
+        if var.isInvariant or localpaths != None:
+            # For time-invariant fields, or if we are searching local paths,
+            # assume that there is no need to append yyyymm to the end of
+            # directories.
+            base_path = p
         else:
-            glade_base_path = p
+            base_path = p + f'{yyyy:04d}{mm:02d}/'
 
-        filename = glade_base_path + var.ERA5file.format(begin_date, end_date)
+        filename = base_path + var.ERA5file.format(begin_date, end_date)
         if os.path.isfile(filename):
             return filename
 
@@ -180,21 +191,29 @@ def write_slab( intfile, slab, xlvl, proj, WPSname, hdate, units, map_source, de
         hdate, units, map_source, desc, slab)
 
 
+def add_trailing_slash(str):
+    """ Returns str with a forward slash appended to it if the str argument does
+    not end with a forward slash character. Otherwise, return str unmodified if
+    it already ends with a slash.
+    """
+    if str[-1] == '/':
+        return str
+    else:
+        return str + '/'
+
+
 if __name__ == '__main__':
     from netCDF4 import Dataset
     import numpy as np
     import WPSUtils
-    import sys
+    import argparse
 
-    if len(sys.argv) != 2:
-        print('')
-        print('Usage: era5_to_int.py <datetime>')
-        print('')
-        print('       where <datetime> is the date-time to convert in YYYY-MM-DD_HH format')
-        print('')
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('datetime', help='the date-time to convert in YYYY-MM-DD_HH format')
+    parser.add_argument('-p', '--path', help='the local path to search for ERA5 netCDF files')
+    args = parser.parse_args()
 
-    initdate = sys.argv[1]
+    initdate = args.datetime
 
     # Set up the two map projections used in the ERA5 fields to be converted
     Gaussian = MapProjection(WPSUtils.Projections.GAUSS,
@@ -222,15 +241,18 @@ if __name__ == '__main__':
     int_vars.append(MetVar('PSFC', 'SP', 'e5.oper.an.ml.128_134_sp.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('SOILGEO', 'Z', 'e5.oper.invariant.128_129_z.regn320sc.2016010100_2016010100.nc', begin_monthly, end_monthly, Gaussian, isInvariant=True))
 
-    find_file = find_glade_file
-
     intfile = WPSUtils.IntermediateFile('ERA5', initdate)
 
+    if args.path != None:
+        paths = [ add_trailing_slash(p) for p in args.path.split(',') ]
+    else:
+        paths = None
+
     for v in int_vars:
-        e5filename = find_file(v, initdate)
+        e5filename = find_era5_file(v, initdate, localpaths=paths)
         idx = find_time_index(e5filename, initdate)
         if idx == -1:
-           idx = 0
+            idx = 0
         proj = v.mapProj
 
         print(e5filename)
