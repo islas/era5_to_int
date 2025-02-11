@@ -10,9 +10,12 @@ Pre-processing System (WPS) intermediate file format, permitting the use of
 these data with either the Weather Research and Forecasting (WRF) model or the
 Model for Prediction Across Scales - Atmosphere (MPAS-A).
 
-*At present*, the script is designed to be run on a system that has access to
-the NWSC Glade filesystem -- for example, Casper or Derecho -- and the ERA5
-model-level netCDF files are assumed to be those provided by the ds633 datasets.
+The only required command-line argument is the date-time, in YYYY-MM-DD_HH
+format, of ERA5 model-level files to process. With no optional arguments, the
+script will search known paths on the NWSC Glade filesystem for ERA5 model-level
+netCDF files. If the `-p`/`--path` option is provided with a local path, the
+script will instead search that local path for ERA5 files that have been
+downloaded from the NSF NCAR Research Data Archive (RDA) ds633 datasets.
 
 The following fields from the ds633 datasets are handled by the script:
 
@@ -48,12 +51,17 @@ The `era5_to_int.py` script requires:
 
 ## Usage
 
-The `era5_to_int.py` script takes a single command-line argument, which is the
-valid date-time to be processed. This date-time is specified in `YYYY-MM-DD_HH`
-format. For example:
-
+Usage is provided by running the `era5_to_int.py` script with the `-h`/`--help`
+argument, which prints the following:
 ```
-era5_to_int.py 2023-01-28_00
+  usage: era5_to_int.py [-h] [-p PATH] datetime
+
+  positional arguments:
+    datetime              the date-time to convert in YYYY-MM-DD_HH format
+
+  options:
+    -h, --help            show this help message and exit
+    -p PATH, --path PATH  the local path to search for ERA5 netCDF files
 ```
 
 Upon successful completion, an intermediate file with the prefix `ERA5` is
