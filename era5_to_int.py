@@ -34,6 +34,20 @@ def datetime_to_string(dt):
     return '{:04d}-{:02d}-{:02d}_{:02d}'.format(dt.year, dt.month, dt.day, dt.hour)
 
 
+def string_to_yyyymmddhh(str):
+    """ Given a string of the form yyyy-mm-dd_hh, returns the component year,
+    month, day, and hour as a tuple of integers.
+    """
+    tmp = str.split('-')
+    yyyy = int(tmp[0])
+    mm = int(tmp[1])
+    ddhh = tmp[2]
+    dd = int(ddhh.split('_')[0])
+    hh = int(ddhh.split('_')[1])
+
+    return yyyy, mm, dd, hh
+
+
 def begin_6hourly(yyyy, mm, dd, hh):
     """ Returns a date-time string of the form yyyymmddhh for the year, month,
     day, and hour with the hours rounded down the the beginning of a six-hour
@@ -127,12 +141,7 @@ def find_era5_file(var, validtime, localpaths=None):
     else:
         file_paths = glade_paths
 
-    tmp = validtime.split('-')
-    yyyy = int(tmp[0])
-    mm = int(tmp[1])
-    ddhh = tmp[2]
-    dd = int(ddhh.split('_')[0])
-    hh = int(ddhh.split('_')[1])
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(validtime)
 
     begin_date = var.beginDateFn(yyyy, mm, dd, hh)
     end_date = var.endDateFn(yyyy, mm, dd, hh)
@@ -164,12 +173,7 @@ def find_time_index(ncfilename, validtime):
     from netCDF4 import Dataset
     import numpy as np
 
-    tmp = validtime.split('-')
-    yyyy = int(tmp[0])
-    mm = int(tmp[1])
-    ddhh = tmp[2]
-    dd = int(ddhh.split('_')[0])
-    hh = int(ddhh.split('_')[1])
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(validtime)
 
     needed_date = yyyy * 1000000 + mm * 10000 + dd * 100 + hh
 
@@ -217,21 +221,11 @@ def handle_datetime_args(args):
     If 'interval_hours' is 0, it defaults to a interval of six hours.
     """
 
-    tmp = args.datetime.split('-')
-    yyyy = int(tmp[0])
-    mm = int(tmp[1])
-    ddhh = tmp[2]
-    dd = int(ddhh.split('_')[0])
-    hh = int(ddhh.split('_')[1])
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(args.datetime)
     startDate = datetime.datetime(yyyy, mm, dd, hh)
 
     if args.until_datetime != None:
-        tmp = args.until_datetime.split('-')
-        yyyy = int(tmp[0])
-        mm = int(tmp[1])
-        ddhh = tmp[2]
-        dd = int(ddhh.split('_')[0])
-        hh = int(ddhh.split('_')[1])
+        yyyy, mm, dd, hh = string_to_yyyymmddhh(args.until_datetime)
         endDate = datetime.datetime(yyyy, mm, dd, hh)
     else:
         endDate = startDate
