@@ -11,11 +11,13 @@ these data with either the Weather Research and Forecasting (WRF) model or the
 Model for Prediction Across Scales - Atmosphere (MPAS-A).
 
 The only required command-line argument is the date-time, in YYYY-MM-DD_HH
-format, of ERA5 model-level files to process. With no optional arguments, the
-script will search known paths on the NWSC Glade filesystem for ERA5 model-level
-netCDF files. If the `-p`/`--path` option is provided with a local path, the
-script will instead search that local path for ERA5 files that have been
-downloaded from the NSF NCAR Research Data Archive (RDA) ds633 datasets.
+format, of ERA5 model-level files to convert. For example:
+```
+era5_to_int.py 2024-05-01_00
+```
+
+Conversion of a range of date-times is possible through the use of additional
+command-line arguments as described in the Usage section.
 
 The following fields from the ds633 datasets are handled by the script:
 
@@ -51,21 +53,52 @@ The `era5_to_int.py` script requires:
 
 ## Usage
 
-Usage is provided by running the `era5_to_int.py` script with the `-h`/`--help`
-argument, which prints the following:
+The only required command-line argument is the date-time, in YYYY-MM-DD_HH
+format, of ERA5 model-level files to convert. For example:
 ```
-  usage: era5_to_int.py [-h] [-p PATH] datetime
-
-  positional arguments:
-    datetime              the date-time to convert in YYYY-MM-DD_HH format
-
-  options:
-    -h, --help            show this help message and exit
-    -p PATH, --path PATH  the local path to search for ERA5 netCDF files
+era5_to_int.py 2024-05-01_00
 ```
 
 Upon successful completion, an intermediate file with the prefix `ERA5` is
-created in the current working directory; for example, `ERA5:2023-01-28_00`.
+created in the current working directory; for example, `ERA5:2024-05-01_00`.
+
+With no optional arguments, the script will search known paths on the NWSC Glade
+filesystem for ERA5 model-level netCDF files. If the `-p`/`--path` option is
+provided with a local path, the script will instead search that local path for
+ERA5 files that have been downloaded from the NSF NCAR Research Data Archive
+(RDA) ds633 datasets. For example:
+```
+era5_to_int.py --path /some/data/directory/era5 2024-05-01_00
+```
+
+Processing a range of times is possible by providing as a second positional
+argument the date-time until which time records should be converted. For
+example, to converted the entire month of May 2024:
+```
+era5_to_int.py 2024-05-01_00 2024-05-31_18
+```
+
+By default, fields are converted at a six-hourly interval, and a different
+interval may be specified with a third positional argument. For example, to
+convert data at a three-hourly interval for the month of May 2024:
+```
+era5_to_int.py 2024-05-01_00 2024-05-31_21 3
+```
+
+Usage is provided by running the `era5_to_int.py` script with the `-h`/`--help`
+argument, which prints the following:
+```
+usage: era5_to_int.py [-h] [-p PATH] datetime [until_datetime] [interval_hours]
+
+positional arguments:
+  datetime              the date-time to convert in YYYY-MM-DD_HH format
+  until_datetime        the date-time in YYYY-MM-DD_HH format until which records are converted (Default: datetime)
+  interval_hours        the interval in hours between records to be converted (Default: 6)
+
+options:
+  -h, --help            show this help message and exit
+  -p PATH, --path PATH  the local path to search for ERA5 netCDF files
+```
 
 ## Supplementary files
 
