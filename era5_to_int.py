@@ -219,6 +219,13 @@ if __name__ == '__main__':
     int_vars.append(MetVar('ST028100', 'STL3', 'e5.oper.an.sfc.128_183_stl3.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
     int_vars.append(MetVar('ST100289', 'STL4', 'e5.oper.an.sfc.128_236_stl4.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
     int_vars.append(MetVar('SEAICE', 'CI', 'e5.oper.an.sfc.128_031_ci.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('TT', 'VAR_2T', 'e5.oper.an.sfc.128_167_2t.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('DEWPT', 'VAR_2D', 'e5.oper.an.sfc.128_168_2d.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('UU', 'VAR_10U', 'e5.oper.an.sfc.128_165_10u.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('VV', 'VAR_10V', 'e5.oper.an.sfc.128_166_10v.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('SNOW_DEN', 'RSN', 'e5.oper.an.sfc.128_033_rsn.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('SNOW_EC', 'SD', 'e5.oper.an.sfc.128_141_sd.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
+    int_vars.append(MetVar('PMSL', 'MSL', 'e5.oper.an.sfc.128_151_msl.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
     int_vars.append(MetVar('PSFC', 'SP', 'e5.oper.an.ml.128_134_sp.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('SOILGEO', 'Z', 'e5.oper.invariant.128_129_z.regn320sc.2016010100_2016010100.nc', begin_monthly, end_monthly, Gaussian, isInvariant=True))
 
@@ -245,8 +252,13 @@ if __name__ == '__main__':
             if field_arr.ndim == 2:
                 slab = field_arr
                 xlvl = 200100.0
+
+                # There are some special cases in which 2-d fields are not
+                # surface (xlvl = 200100.0) variables
                 if v.WPSname == 'SOILGEO':
                     xlvl = 1.0
+                elif v.WPSname == 'PMSL':
+                    xlvl = 201300.0
                 write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
                     map_source, desc)
             else:

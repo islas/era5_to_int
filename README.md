@@ -24,6 +24,13 @@ The following fields from the ds633 datasets are handled by the script:
 | V       | [d633006](https://rda.ucar.edu/datasets/d633006/) | ~0.281-deg Gaussian | 137 |
 | SOILGEO | [d633000](https://rda.ucar.edu/datasets/d633000/) | ~0.281-deg Gaussian | 1 |
 | SP      | [d633006](https://rda.ucar.edu/datasets/d633006/) | ~0.281-deg Gaussian | 1 |
+| MSL     | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| VAR_2T  | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| VAR_2D  | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| VAR_10U | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| VAR_10V | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| RSN     | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
+| SD      | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
 | LSM     | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
 | SSTK    | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
 | SKT     | [d633000](https://rda.ucar.edu/datasets/d633000/) | 0.25-deg Lat-Lon | 1 |
