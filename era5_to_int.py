@@ -198,7 +198,7 @@ def write_slab( intfile, slab, xlvl, proj, WPSname, hdate, units, map_source, de
         5, slab.shape[1], slab.shape[0], proj.projType, 0.0, xlvl,
         proj.startLat, proj.startLon, proj.startI, proj.startJ,
         proj.deltaLat, proj.deltaLon, proj.dx, proj.dy, proj.xlonc,
-        proj.truelat1, proj.truelat2, 6371229.0, 0, v.WPSname,
+        proj.truelat1, proj.truelat2, 6371229.0, 0, WPSname,
         hdate, units, map_source, desc, slab)
 
 
