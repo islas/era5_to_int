@@ -27,6 +27,27 @@ def intdate_to_string(utc_int):
     return '{:04d}-{:02d}-{:02d}_{:02d}:00:00'.format(year, month, day, hour)
 
 
+def datetime_to_string(dt):
+    """ Converts a Python datetime instance into a string of the form
+    'yyyy-mm-dd_hh'.
+    """
+    return '{:04d}-{:02d}-{:02d}_{:02d}'.format(dt.year, dt.month, dt.day, dt.hour)
+
+
+def string_to_yyyymmddhh(str):
+    """ Given a string of the form yyyy-mm-dd_hh, returns the component year,
+    month, day, and hour as a tuple of integers.
+    """
+    tmp = str.split('-')
+    yyyy = int(tmp[0])
+    mm = int(tmp[1])
+    ddhh = tmp[2]
+    dd = int(ddhh.split('_')[0])
+    hh = int(ddhh.split('_')[1])
+
+    return yyyy, mm, dd, hh
+
+
 def begin_6hourly(yyyy, mm, dd, hh):
     """ Returns a date-time string of the form yyyymmddhh for the year, month,
     day, and hour with the hours rounded down the the beginning of a six-hour
@@ -120,12 +141,7 @@ def find_era5_file(var, validtime, localpaths=None):
     else:
         file_paths = glade_paths
 
-    tmp = validtime.split('-')
-    yyyy = int(tmp[0])
-    mm = int(tmp[1])
-    ddhh = tmp[2]
-    dd = int(ddhh.split('_')[0])
-    hh = int(ddhh.split('_')[1])
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(validtime)
 
     begin_date = var.beginDateFn(yyyy, mm, dd, hh)
     end_date = var.endDateFn(yyyy, mm, dd, hh)
@@ -157,12 +173,7 @@ def find_time_index(ncfilename, validtime):
     from netCDF4 import Dataset
     import numpy as np
 
-    tmp = validtime.split('-')
-    yyyy = int(tmp[0])
-    mm = int(tmp[1])
-    ddhh = tmp[2]
-    dd = int(ddhh.split('_')[0])
-    hh = int(ddhh.split('_')[1])
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(validtime)
 
     needed_date = yyyy * 1000000 + mm * 10000 + dd * 100 + hh
 
@@ -202,18 +213,58 @@ def add_trailing_slash(str):
         return str + '/'
 
 
+def handle_datetime_args(args):
+    """ Returns starting and ending datetime objects along with an interval
+    timedelta object given an argparse namespace with members 'datetime',
+    'until_datetime', and 'interval_hours'. If 'until_datetime' is None,
+    the returned ending datetime is the same as the starting datetime.
+    If 'interval_hours' is 0, it defaults to a interval of six hours.
+    """
+
+    yyyy, mm, dd, hh = string_to_yyyymmddhh(args.datetime)
+    startDate = datetime.datetime(yyyy, mm, dd, hh)
+
+    if args.until_datetime != None:
+        yyyy, mm, dd, hh = string_to_yyyymmddhh(args.until_datetime)
+        endDate = datetime.datetime(yyyy, mm, dd, hh)
+    else:
+        endDate = startDate
+
+    if endDate < startDate:
+        raise ValueError('until_datetime precedes datetime')
+
+    if args.interval_hours > 0:
+        intvH = datetime.timedelta(hours=args.interval_hours)
+    else:
+        raise ValueError('interval_hours is not a positive integer')
+
+    return startDate, endDate, intvH
+
+
 if __name__ == '__main__':
     from netCDF4 import Dataset
     import numpy as np
     import WPSUtils
     import argparse
+    import datetime
+    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument('datetime', help='the date-time to convert in YYYY-MM-DD_HH format')
+    parser.add_argument('until_datetime', nargs='?', default=None, help='the date-time in YYYY-MM-DD_HH format until which records are converted (Default: datetime)')
+    parser.add_argument('interval_hours', type=int, nargs='?', default=6, help='the interval in hours between records to be converted (Default: %(default)s)')
     parser.add_argument('-p', '--path', help='the local path to search for ERA5 netCDF files')
     args = parser.parse_args()
 
-    initdate = args.datetime
+    try:
+        startDate, endDate, intvH = handle_datetime_args(args)
+    except ValueError as e:
+        print('Error in argument list: ' + e.args[0])
+        sys.exit(1)
+
+    print('datetime = ', startDate)
+    print('until_datetime = ', endDate)
+    print('interval_hours = ', intvH)
 
     # Set up the two map projections used in the ERA5 fields to be converted
     Gaussian = MapProjection(WPSUtils.Projections.GAUSS,
@@ -248,45 +299,52 @@ if __name__ == '__main__':
     int_vars.append(MetVar('PSFC', 'SP', 'e5.oper.an.ml.128_134_sp.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('SOILGEO', 'Z', 'e5.oper.invariant.128_129_z.regn320sc.2016010100_2016010100.nc', begin_monthly, end_monthly, Gaussian, isInvariant=True))
 
-    intfile = WPSUtils.IntermediateFile('ERA5', initdate)
-
     if args.path != None:
         paths = [ add_trailing_slash(p) for p in args.path.split(',') ]
     else:
         paths = None
 
-    for v in int_vars:
-        e5filename = find_era5_file(v, initdate, localpaths=paths)
-        idx = find_time_index(e5filename, initdate)
-        if idx == -1:
-            idx = 0
-        proj = v.mapProj
+    currDate = startDate
+    while currDate <= endDate:
+        initdate = datetime_to_string(currDate)
+        print('Processing time record ' + initdate)
 
-        print(e5filename)
-        with Dataset(e5filename) as f:
-            hdate = intdate_to_string(f.variables['utc_date'][idx])
-            print('Converting ' + v.WPSname + ' at ' + hdate)
-            map_source = 'ERA5 reanalysis grid          '
-            units = f.variables[v.ERA5name].units
-            desc = f.variables[v.ERA5name].long_name
-            field_arr = f.variables[v.ERA5name][idx,:]
+        intfile = WPSUtils.IntermediateFile('ERA5', initdate)
 
-            if field_arr.ndim == 2:
-                slab = field_arr
-                xlvl = 200100.0
+        for v in int_vars:
+            e5filename = find_era5_file(v, initdate, localpaths=paths)
+            idx = find_time_index(e5filename, initdate)
+            if idx == -1:
+                idx = 0
+            proj = v.mapProj
 
-                # There are some special cases in which 2-d fields are not
-                # surface (xlvl = 200100.0) variables
-                if v.WPSname == 'SOILGEO':
-                    xlvl = 1.0
-                elif v.WPSname == 'PMSL':
-                    xlvl = 201300.0
-                write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
-                    map_source, desc)
-            else:
-                for k in range(f.dimensions['level'].size):
-                    slab = field_arr[k,:,:]
-                    write_slab(intfile, slab, float(f.variables['level'][k]), proj,
-                        v.WPSname, hdate, units, map_source, desc)
+            print(e5filename)
+            with Dataset(e5filename) as f:
+                hdate = intdate_to_string(f.variables['utc_date'][idx])
+                print('Converting ' + v.WPSname + ' at ' + hdate)
+                map_source = 'ERA5 reanalysis grid          '
+                units = f.variables[v.ERA5name].units
+                desc = f.variables[v.ERA5name].long_name
+                field_arr = f.variables[v.ERA5name][idx,:]
 
-    intfile.close()
+                if field_arr.ndim == 2:
+                    slab = field_arr
+                    xlvl = 200100.0
+
+                    # There are some special cases in which 2-d fields are not
+                    # surface (xlvl = 200100.0) variables
+                    if v.WPSname == 'SOILGEO':
+                        xlvl = 1.0
+                    elif v.WPSname == 'PMSL':
+                        xlvl = 201300.0
+                    write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
+                        map_source, desc)
+                else:
+                    for k in range(f.dimensions['level'].size):
+                        slab = field_arr[k,:,:]
+                        write_slab(intfile, slab, float(f.variables['level'][k]), proj,
+                            v.WPSname, hdate, units, map_source, desc)
+
+        intfile.close()
+
+        currDate += intvH
