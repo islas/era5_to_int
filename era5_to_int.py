@@ -1,5 +1,78 @@
 #!/usr/bin/env python3
 
+class SnowDiags:
+    """ Implements the computation of SNOW (water equivalent snow depth) and
+    SNOWH (physical snow depth) from ERA5 RSN (water equivalent snow depth)
+    and SD (snow density) fields.
+    """
+
+    def __init__(self):
+        self.snow_den = None
+        self.snow_ec = None
+
+    def consider(self, field, xlvl, proj, hdate, slab, intfile):
+        """ Considers whether a given field may be used in the computation
+        of SNOW or SNOWH. When all available information has been acquired, this
+        method computes these two fields and writes them to the output
+        intermediate file.
+        """
+
+        if field == 'SNOW_DEN' and xlvl == 200100.0:
+            self.snow_den = slab
+        elif field == 'SNOW_EC' and xlvl == 200100.0:
+            self.snow_ec = slab
+        else:
+            return
+
+        if self.snow_den is not None and self.snow_ec is not None:
+            print('Computing SNOWH and SNOW')
+            snow = self.snow_ec * 1000.0
+            snowh = snow / self.snow_den
+
+            write_slab(intfile, snow, 200100.0, proj, 'SNOW', hdate, 'kg m**-2',
+                'ERA5 reanalysis grid', 'Water equivalent snow depth')
+            write_slab(intfile, snowh, 200100.0, proj, 'SNOWH', hdate, 'm',
+                'ERA5 reanalysis grid', 'Physical snow depth')
+
+            self.snow_den = None
+            self.snow_ec = None
+
+
+class RH2mDiags:
+    """ Implements the computation of RH (relative humidity in % at the surface)
+    from ERA5 VAR_2T (2m temperature) and VAR_2D (2m dewpoint) fields.
+    """
+    def __init__(self):
+        self.t = None
+        self.td = None
+
+    def consider(self, field, xlvl, proj, hdate, slab, intfile):
+        """ Considers whether a given field may be used in the computation
+        of RH at the surface. When all available information has been acquired,
+        this method computes the RH field and writes it to the output
+        intermediate file.
+        """
+
+        if field == 'TT' and xlvl == 200100.0:
+            self.t = slab
+        elif field == 'DEWPT' and xlvl == 200100.0:
+            self.td = slab
+        else:
+            return
+
+        if self.t is not None and self.td is not None:
+            print('Computing RH at 200100.0')
+
+            Xlv = 2.5e6
+            Rv = 461.5
+            rh2 = np.exp(Xlv/Rv*(1.0/self.t - 1.0/self.td)) * 1.0e2
+
+            write_slab(intfile, rh2, 200100.0, proj, 'RH', hdate, '%',
+                'ERA5 reanalysis grid', 'Relative humidity')
+
+            self.t = None
+            self.td = None
+
 
 def days_in_month(year, month):
     """ Returns the number of days in a month, depending on the year.
@@ -198,7 +271,7 @@ def write_slab( intfile, slab, xlvl, proj, WPSname, hdate, units, map_source, de
         5, slab.shape[1], slab.shape[0], proj.projType, 0.0, xlvl,
         proj.startLat, proj.startLon, proj.startI, proj.startJ,
         proj.deltaLat, proj.deltaLon, proj.dx, proj.dy, proj.xlonc,
-        proj.truelat1, proj.truelat2, 6371229.0, 0, v.WPSname,
+        proj.truelat1, proj.truelat2, 6371229.0, 0, WPSname,
         hdate, units, map_source, desc, slab)
 
 
@@ -272,6 +345,10 @@ if __name__ == '__main__':
     LatLon = MapProjection(WPSUtils.Projections.LATLON,
          90.0, 0.0, 1.0, 1.0, -0.25, 0.25)
 
+    diagnostics = []
+    diagnostics.append(SnowDiags())
+    diagnostics.append(RH2mDiags())
+
     int_vars = []
     int_vars.append(MetVar('SPECHUMD', 'Q', 'e5.oper.an.ml.0_5_0_1_0_q.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('TT', 'T', 'e5.oper.an.ml.0_5_0_0_0_t.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
@@ -339,11 +416,18 @@ if __name__ == '__main__':
                         xlvl = 201300.0
                     write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
                         map_source, desc)
+
+                    for diag in diagnostics:
+                        diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
                 else:
                     for k in range(f.dimensions['level'].size):
                         slab = field_arr[k,:,:]
                         write_slab(intfile, slab, float(f.variables['level'][k]), proj,
                             v.WPSname, hdate, units, map_source, desc)
+
+                        for diag in diagnostics:
+                            diag.consider(v.WPSname, float(f.variables['level'][k]),
+                                proj, hdate, slab, intfile)
 
         intfile.close()
 
