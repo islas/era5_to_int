@@ -137,6 +137,20 @@ def end_6hourly(yyyy, mm, dd, hh):
     return f'{yyyy:04d}{mm:02d}{dd:02d}{((hh // 6) * 6 + 5):02d}'
 
 
+def begin_daily(yyyy, mm, dd, hh):
+    """ Returns a date-time string of the form yyyymmddhh for the year, month,
+    day, and hour with the hours rounded down the beginning of a day (i.e., to 00).
+    """
+    return f'{yyyy:04d}{mm:02d}{dd:02d}{0:02d}'
+
+
+def end_daily(yyyy, mm, dd, hh):
+    """ Returns a date-time string of the form yyyymmddhh for the year, month,
+    day, and hour with the hours rounded up the end of a day (i.e., to 23).
+    """
+    return f'{yyyy:04d}{mm:02d}{dd:02d}{23:02d}'
+
+
 def begin_monthly(yyyy, mm, dd, hh):
     """ Returns a date-time string of the form yyyymmddhh for the year, month,
     day, and hour with the day and hour rounded down the the beginning of a
@@ -204,6 +218,7 @@ def find_era5_file(var, validtime, localpaths=None):
 
     glade_paths = [
         '/glade/campaign/collections/rda/data/ds633.6/e5.oper.an.ml/',
+        '/glade/campaign/collections/rda/data/ds633.0/e5.oper.an.pl/',
         '/glade/campaign/collections/rda/data/ds633.0/e5.oper.an.sfc/',
         '/glade/campaign/collections/rda/data/ds633.0/e5.oper.invariant/197901/',
         '/gpfs/csfs1/collections/rda/decsdata/ds630.0/P/e5.oper.invariant/201601/'
@@ -327,6 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('until_datetime', nargs='?', default=None, help='the date-time in YYYY-MM-DD_HH format until which records are converted (Default: datetime)')
     parser.add_argument('interval_hours', type=int, nargs='?', default=6, help='the interval in hours between records to be converted (Default: %(default)s)')
     parser.add_argument('-p', '--path', help='the local path to search for ERA5 netCDF files')
+    parser.add_argument('-i', '--isobaric', action='store_true', help='use ERA5 pressure-level data rather than model-level data')
     args = parser.parse_args()
 
     try:
@@ -350,10 +366,17 @@ if __name__ == '__main__':
     diagnostics.append(RH2mDiags())
 
     int_vars = []
-    int_vars.append(MetVar('SPECHUMD', 'Q', 'e5.oper.an.ml.0_5_0_1_0_q.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
-    int_vars.append(MetVar('TT', 'T', 'e5.oper.an.ml.0_5_0_0_0_t.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
-    int_vars.append(MetVar('UU', 'U', 'e5.oper.an.ml.0_5_0_2_2_u.regn320uv.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
-    int_vars.append(MetVar('VV', 'V', 'e5.oper.an.ml.0_5_0_2_3_v.regn320uv.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
+    if args.isobaric:
+        int_vars.append(MetVar('GEOPT', 'Z', 'e5.oper.an.pl.128_129_z.ll025sc.{}_{}.nc', begin_daily, end_daily, LatLon))
+        int_vars.append(MetVar('SPECHUMD', 'Q', 'e5.oper.an.pl.128_133_q.ll025sc.{}_{}.nc', begin_daily, end_daily, LatLon))
+        int_vars.append(MetVar('TT', 'T', 'e5.oper.an.pl.128_130_t.ll025sc.{}_{}.nc', begin_daily, end_daily, LatLon))
+        int_vars.append(MetVar('UU', 'U', 'e5.oper.an.pl.128_131_u.ll025uv.{}_{}.nc', begin_daily, end_daily, LatLon))
+        int_vars.append(MetVar('VV', 'V', 'e5.oper.an.pl.128_132_v.ll025uv.{}_{}.nc', begin_daily, end_daily, LatLon))
+    else:
+        int_vars.append(MetVar('SPECHUMD', 'Q', 'e5.oper.an.ml.0_5_0_1_0_q.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
+        int_vars.append(MetVar('TT', 'T', 'e5.oper.an.ml.0_5_0_0_0_t.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
+        int_vars.append(MetVar('UU', 'U', 'e5.oper.an.ml.0_5_0_2_2_u.regn320uv.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
+        int_vars.append(MetVar('VV', 'V', 'e5.oper.an.ml.0_5_0_2_3_v.regn320uv.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('LANDSEA', 'LSM', 'e5.oper.invariant.128_172_lsm.ll025sc.1979010100_1979010100.nc', begin_monthly, end_monthly, LatLon, isInvariant=True))
     int_vars.append(MetVar('SST', 'SSTK', 'e5.oper.an.sfc.128_034_sstk.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
     int_vars.append(MetVar('SKINTEMP', 'SKT', 'e5.oper.an.sfc.128_235_skt.ll025sc.{}_{}.nc', begin_monthly, end_monthly, LatLon))
