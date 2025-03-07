@@ -437,6 +437,7 @@ if __name__ == '__main__':
                         xlvl = 1.0
                     elif v.WPSname == 'PMSL':
                         xlvl = 201300.0
+
                     write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
                         map_source, desc)
 
@@ -445,12 +446,20 @@ if __name__ == '__main__':
                 else:
                     for k in range(f.dimensions['level'].size):
                         slab = field_arr[k,:,:]
-                        write_slab(intfile, slab, float(f.variables['level'][k]), proj,
+
+                        # For isobaric levels, the WPS intermediate file xlvl
+                        # value should be in Pa, while the ERA5 netCDF files
+                        # provide units of hPa
+                        if args.isobaric:
+                            xlvl = f.variables['level'][k] * 100.0    # Convert hPa to Pa
+                        else:
+                            xlvl = float(f.variables['level'][k])     # Level index
+
+                        write_slab(intfile, slab, xlvl, proj,
                             v.WPSname, hdate, units, map_source, desc)
 
                         for diag in diagnostics:
-                            diag.consider(v.WPSname, float(f.variables['level'][k]),
-                                proj, hdate, slab, intfile)
+                            diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
 
         intfile.close()
 
