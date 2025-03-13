@@ -429,6 +429,16 @@ if __name__ == '__main__':
     int_vars.append(MetVar('PSFC', 'SP', 'e5.oper.an.ml.128_134_sp.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
     int_vars.append(MetVar('SOILGEO', 'Z', 'e5.oper.invariant.128_129_z.regn320sc.2016010100_2016010100.nc', begin_monthly, end_monthly, Gaussian, isInvariant=True))
 
+    # WPS variable names in dont_output cause the corresponding field to not be
+    #   written to the output intermediate file. This is useful when fields are
+    #   read from ERA5 netCDF files only to be used in diagnosing other fields.
+    dont_output = []
+    dont_output.append('GEOPT')    # Only used to diagnose GHT
+    dont_output.append('SOILGEO')  # Only used to diagnose SOILHGT
+    dont_output.append('DEWPT')    # Only used to diagnose RH
+    dont_output.append('SNOW_EC')  # Only used in diagnosing SNOW and SNOWH
+    dont_output.append('SNOW_DEN') # Only used in diagnosing SNOW and SNOWH
+
     if args.path != None:
         paths = [ add_trailing_slash(p) for p in args.path.split(',') ]
     else:
@@ -468,8 +478,12 @@ if __name__ == '__main__':
                     elif v.WPSname == 'PMSL':
                         xlvl = 201300.0
 
-                    write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate, units,
-                        map_source, desc)
+                    if not v.WPSname in dont_output:
+                        write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate,
+                            units, map_source, desc)
+                    else:
+                        print(v.WPSname + ' is NOT being written to the ' +
+                            'intermediate file at level', xlvl)
 
                     for diag in diagnostics:
                         diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
@@ -485,8 +499,12 @@ if __name__ == '__main__':
                         else:
                             xlvl = float(f.variables['level'][k])     # Level index
 
-                        write_slab(intfile, slab, xlvl, proj,
-                            v.WPSname, hdate, units, map_source, desc)
+                        if not v.WPSname in dont_output:
+                            write_slab(intfile, slab, xlvl, proj,
+                                v.WPSname, hdate, units, map_source, desc)
+                        else:
+                            print(v.WPSname + ' is NOT being written to the ' +
+                                'intermediate file at level', xlvl)
 
                         for diag in diagnostics:
                             diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
