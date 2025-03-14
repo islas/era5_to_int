@@ -478,12 +478,12 @@ if __name__ == '__main__':
                     elif v.WPSname == 'PMSL':
                         xlvl = 201300.0
 
-                    if not v.WPSname in dont_output:
-                        write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate,
-                            units, map_source, desc)
-                    else:
+                    if v.WPSname in dont_output:
                         print(v.WPSname + ' is NOT being written to the ' +
                             'intermediate file at level', xlvl)
+                    else:
+                        write_slab(intfile, slab, xlvl, proj, v.WPSname, hdate,
+                            units, map_source, desc)
 
                     for diag in diagnostics:
                         diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
@@ -499,12 +499,12 @@ if __name__ == '__main__':
                         else:
                             xlvl = float(f.variables['level'][k])     # Level index
 
-                        if not v.WPSname in dont_output:
-                            write_slab(intfile, slab, xlvl, proj,
-                                v.WPSname, hdate, units, map_source, desc)
-                        else:
+                        if v.WPSname in dont_output:
                             print(v.WPSname + ' is NOT being written to the ' +
                                 'intermediate file at level', xlvl)
+                        else:
+                            write_slab(intfile, slab, xlvl, proj,
+                                v.WPSname, hdate, units, map_source, desc)
 
                         for diag in diagnostics:
                             diag.consider(v.WPSname, xlvl, proj, hdate, slab, intfile)
