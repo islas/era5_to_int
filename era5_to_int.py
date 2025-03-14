@@ -241,7 +241,7 @@ def find_era5_file(var, validtime, localpaths=None):
     directories to search for ERA5 netCDF files. If localpaths is not provided
     or is None, known paths on the NWSC Glade filesystem are searched.
     If no file can be found containing the specified variable at the specified
-    time an empty string is returned.
+    time, a RuntimeError exception is raised.
     """
     import os.path
 
@@ -276,7 +276,9 @@ def find_era5_file(var, validtime, localpaths=None):
         if os.path.isfile(filename):
             return filename
 
-    return ''
+    raise RuntimeError('Error: Could not find file ' +
+        var.ERA5file.format(begin_date, end_date) +
+        ' needed for ERA5 variable ' + var.ERA5name)
 
 
 def find_time_index(ncfilename, validtime):
@@ -452,7 +454,13 @@ if __name__ == '__main__':
         intfile = WPSUtils.IntermediateFile('ERA5', initdate)
 
         for v in int_vars:
-            e5filename = find_era5_file(v, initdate, localpaths=paths)
+            try:
+                e5filename = find_era5_file(v, initdate, localpaths=paths)
+            except RuntimeError as e:
+                print(e.args[0])
+                intfile.close()
+                sys.exit(1)
+
             idx = find_time_index(e5filename, initdate)
             if idx == -1:
                 idx = 0
