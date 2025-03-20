@@ -404,6 +404,7 @@ if __name__ == '__main__':
         int_vars.append(MetVar('TT', 'T', 'e5.oper.an.pl.128_130_t.ll025sc.{}_{}.nc', begin_daily, end_daily, LatLon))
         int_vars.append(MetVar('UU', 'U', 'e5.oper.an.pl.128_131_u.ll025uv.{}_{}.nc', begin_daily, end_daily, LatLon))
         int_vars.append(MetVar('VV', 'V', 'e5.oper.an.pl.128_132_v.ll025uv.{}_{}.nc', begin_daily, end_daily, LatLon))
+        int_vars.append(MetVar('RH', 'R', 'e5.oper.an.pl.128_157_r.ll025sc.{}_{}.nc', begin_daily, end_daily, LatLon))
     else:
         int_vars.append(MetVar('SPECHUMD', 'Q', 'e5.oper.an.ml.0_5_0_1_0_q.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
         int_vars.append(MetVar('TT', 'T', 'e5.oper.an.ml.0_5_0_0_0_t.regn320sc.{}_{}.nc', begin_6hourly, end_6hourly, Gaussian))
