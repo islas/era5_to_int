@@ -81,6 +81,16 @@ class RHDiags:
         self.spechumd = {}
         self.t        = {}
         self.levels   = levels
+        # From MPAS src/core_atmosphere/physics/mpas_atmphys_functions.F
+        self.C0= .611583699E03
+        self.C1= .444606896E02
+        self.C2= .143177157E01
+        self.C3= .264224321E-1
+        self.C4= .299291081E-3
+        self.C5= .203154182E-5
+        self.C6= .702620698E-8
+        self.C7= .379534310E-11
+        self.C8=-.321582393E-13
 
     def consider(self, field, xlvl, proj, hdate, slab, intfile):
         """ Considers whether a given field may be used in the computation
@@ -100,8 +110,36 @@ class RHDiags:
             for pa in self.spechumd.keys() :
               print('Computing RH at ' + str( pa ) )
               t0 = 273.16
-              rh = 0.263 * pa * self.spechumd[pa] * (np.exp( 17.67 * ( self.t[pa] - t0 ) / ( self.t[pa] - 29.65 ) ) )
+              
+              t_bounded =np.maximum(-80.0, self.t[pa] - t0 )
+              # Simplified calc of saturation vapor pressure
+              # esL = 612.2 * np.exp( 17.67 * t_bounded / (self.t-29.65 ) )
+              # esL with coefficients used instead
+              esL = ( self.C0 + t_bounded * 
+                        ( self.C1 + t_bounded * 
+                          ( self.C2 + t_bounded * 
+                            ( self.C3 + t_bounded * 
+                              ( self.C4 + t_bounded * 
+                                ( self.C5 + t_bounded * 
+                                  ( self.C6 + t_bounded * 
+                                    ( self.C7 + t_bounded* self.C8 )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
 
+              # Even with P=1050mb and T=55C, the sat. vap. pres only contributes to
+              # ~15% of total pres.
+              esL = np.minimum(esL, pa * 0.15 )
+              mixRatioESL        = .622 * esL / ( pa - esL )
+              mixRatioWaterVapor = self.spechumd[pa] / ( 1.0 + self.spechumd[pa] )
+              rh = 100.0 * mixRatioWaterVapor / mixRatioESL
+
+              # rh = 0.263 * pa * self.spechumd[pa] * (np.exp( 17.67 * ( self.t[pa] - t0 ) / ( self.t[pa] - 29.65 ) )**-1)
+              print( rh )
               write_slab(intfile, rh, xlvl, proj, 'RH', hdate, '%',
                   'ERA5 reanalysis grid', 'Relative humidity')
 
